@@ -25,18 +25,20 @@ struct color_t {
 	: r(r), g(g), b(b) {}
 };
 
-enum class StretchRuleVertical : uint8_t { // TODO: add PreserveBottom
+enum class StretchRuleVertical : uint8_t {
 	Disallowed,  // no stretching allowed
 	Allowed, // stretch vertically
 	PreserveTop,  // repeat only the lase row so the details in the top of the flag are preserved
 	PreserveCenter, // last and first row are repeated to preserve the details in the center of the flag
+	PreserveBottom, // repeat only the first row so the details on the bottom side are preserved
 };
 
-enum class StretchRuleHorizontal : uint8_t { // TODO: add PreserveRight
+enum class StretchRuleHorizontal : uint8_t {
 	Disallowed,  // no stretching allowed
 	Allowed, // stretch horizontally
 	PreserveLeft,  // repeat only the last column so the details on the left side are preserved
 	PreserveCenter, // last and first column are repeated to preserve the details in the center of the flag
+	PreserveRight, // repeat only the first column so the details on the right side are preserved
 };
 
 struct flag_t {
@@ -324,14 +326,7 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 	}
 	auto stretchedColors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
 	switch (flag.stretchHorizontal) {
-		case StretchRuleHorizontal::PreserveLeft: {
-			for (auto& row : stretchedColors) {
-				while (static_cast<int>(row.size()) < width) {
-					row.push_back(row.back());
-				}
-			}
-			break;
-		}
+
 		case StretchRuleHorizontal::Allowed: {
 			const int currentWidth = static_cast<int>(stretchedColors[0].size());
 			const std::vector<std::vector<color_t>> unstretchedColors = stretchedColors;
@@ -363,6 +358,14 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 			}
 			break;
 		}
+		case StretchRuleHorizontal::PreserveLeft: {
+			for (auto& row : stretchedColors) {
+				while (static_cast<int>(row.size()) < width) {
+					row.push_back(row.back());
+				}
+			}
+			break;
+		}
 		case StretchRuleHorizontal::PreserveCenter: {
 			const int delta_width = width - static_cast<int>(stretchedColors[0].size());
 			for (auto& row : stretchedColors) {
@@ -373,16 +376,18 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 			}
 			break;
 		}
+		case StretchRuleHorizontal::PreserveRight: {
+			for (auto& row : stretchedColors) {
+				while (static_cast<int>(row.size()) < width) {
+					row.insert(row.begin(), row.front());
+				}
+			}
+			break;
+		}
 		default:
 			break;
 	}
 	switch (flag.stretchVertical) {
-		case StretchRuleVertical::PreserveTop: {
-			while (static_cast<int>(stretchedColors.size()) < height) {
-				stretchedColors.push_back(stretchedColors.back());
-			}
-			break;
-		}
 		case StretchRuleVertical::Allowed: {
 			const int currentHeight = static_cast<int>(stretchedColors.size());
 			const std::vector<std::vector<color_t>> unstretchedColors = stretchedColors;
@@ -400,11 +405,23 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 			}
 			break;
 		}
+		case StretchRuleVertical::PreserveTop: {
+			while (static_cast<int>(stretchedColors.size()) < height) {
+				stretchedColors.push_back(stretchedColors.back());
+			}
+			break;
+		}
 		case StretchRuleVertical::PreserveCenter: {
 			const int delta_height = height - static_cast<int>(stretchedColors.size());
 			for (int i = 0; i < delta_height / 2; ++i) {
 				stretchedColors.insert(stretchedColors.begin(), stretchedColors.front());
 				stretchedColors.push_back(stretchedColors.back());
+			}
+			break;
+		}
+		case StretchRuleVertical::PreserveBottom: {
+			while (static_cast<int>(stretchedColors.size()) < height) {
+				stretchedColors.insert(stretchedColors.begin(), stretchedColors.front());
 			}
 			break;
 		}
