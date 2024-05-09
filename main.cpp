@@ -178,13 +178,15 @@ std::map<std::string, std::string> aliases = {
 	{ "enby", "nonbinary" },
 	{ "pink-lesbian", "lipstick-lesbian" },
 	{ "lesbian", "community-lesbian" },
-	{ "gq", "genderqueer" },
 	{ "progress", "progress-pride" },
 };
 
 std::vector<color_t> g_colorQueue;
 std::vector<std::string> g_filesToCat;
 unsigned int g_currentRow = 0;
+unsigned int g_currentColumn = 0;
+bool two_dimensiona_flag = false;
+flag_t current2dFlag;
 auto g_colorAdjustment = colorAdjust::none;
 
 #if defined(_WIN32)
@@ -235,6 +237,9 @@ void pushFlag(flag_t const& flag) {
 		for (color_t const& color : colors) {
 			g_colorQueue.push_back(color);
 		}
+	} else {
+		two_dimensiona_flag = true;
+		current2dFlag = flag;
 	}
 }
 
@@ -436,7 +441,7 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 	};
 }
 
-void parseCommandLine(const int argc, char** argv) {
+void parseCommandLine(const int argc, char** argv) { // TODO: add support for -s <height>,--stretch <height> to stretch the flag to a certain height
 	bool finishedReadingFlags = false;
 	for (int i = 1; i < argc; ++i) {
 		if (finishedReadingFlags) {
@@ -551,7 +556,48 @@ void abortHandler(int signo) {
 	exit(signo);
 }
 
+void catFile2d(FILE* fh) {
+	int longestLine = 0;
+	char* line = nullptr;
+	size_t len = 0;
+	ssize_t read;
+
+	while ((read = getline(&line, &len, fh)) != -1) {
+		if (read > longestLine) {
+			longestLine = static_cast<int>(read);
+		}
+	}
+	fseek(fh, 0, SEEK_SET);
+
+	const int flagHeight = static_cast<int>(std::get<std::vector<std::vector<color_t>>>(current2dFlag.colors).size());
+	const auto flag = stretch2dFlagTo(current2dFlag, longestLine, flagHeight);
+	const auto& colors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
+
+
+	int c;
+	while ((c = getc(fh)) >= 0) {
+		setColor(colors[g_currentRow][g_currentColumn]);
+		putc(c, stdout);
+		resetColor();
+		g_currentColumn++;
+		if (c == '\n') {
+			g_currentRow++;
+			g_currentColumn = 0;
+			if (g_currentRow == colors.size()) {
+				g_currentRow = 0;
+			}
+		}
+	}
+
+	if (line) {
+		free(line);
+	}
+}
+
 void catFile(FILE* fh) {
+	if (two_dimensiona_flag) {
+		catFile2d(fh);
+	}
 	int c;
 	while ((c = getc(fh)) >= 0) {
 		if (c == '\n') {
