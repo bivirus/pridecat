@@ -27,16 +27,16 @@ struct color_t {
 
 enum class StretchRuleVertical : uint8_t {
 	None,  // no stretching allowed
-	ExtendBottom,  // stretch only from the bottom side (color of last row is repeated)
-	Allowed, // stretch vertically (every colums is repeated)
-	PreserveCenter, // last and first row are repeated
+	Allowed, // stretch vertically
+	PreserveTop,  // repeat only the lase row so the details in the top of the flag are preserved
+	PreserveCenter, // last and first row are repeated to preserve the details in the center of the flag
 };
 
 enum class StretchRuleHorizontal : uint8_t {
 	None,  // no stretching allowed
-	ExtendRight,  // stretch only from the right side (color of last column is repeated)
-	Allowed, // stretch horizontally (every row is repeated)
-	PreserveCenter, // last and first column are repeated
+	Allowed, // stretch horizontally
+	PreserveLeft,  // repeat only the last column so the details on the left side are preserved
+	PreserveCenter, // last and first column are repeated to preserve the details in the center of the flag
 };
 
 struct flag_t {
@@ -161,7 +161,7 @@ std::map<std::string, flag_t const> allFlags = {
 		},
 		"Progress pride flag designed by Daniel Quasar in 2018",
 		StretchRuleVertical::Allowed,
-		StretchRuleHorizontal::ExtendRight,
+		StretchRuleHorizontal::PreserveLeft,  // preserves the details on the left side
 	}}
 };
 
@@ -324,7 +324,7 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) { 
 	}
 	auto stretchedColors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
 	switch (flag.stretchHorizontal) {
-		case StretchRuleHorizontal::ExtendRight: {
+		case StretchRuleHorizontal::PreserveLeft: {
 			for (auto& row : stretchedColors) {
 				while (static_cast<int>(row.size()) < width) {
 					row.push_back(row.back());
@@ -338,12 +338,27 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) { 
 			if (currentWidth >= width) {
 				break;
 			}
-			const int stretchFactor = width / currentWidth;
+			const double stretchFactor = static_cast<double>(width) / currentWidth;
 			for (int row = 0; row < static_cast<int>(unstretchedColors.size()); ++row) {
-				for (int i = 0; i < currentWidth; ++i) {
-					for (int j = 0; j < stretchFactor; ++j) {
-						stretchedColors[row].insert(stretchedColors[row].end(), unstretchedColors[row][i]);
+				stretchedColors[row].clear();
+				double error = 0.0;
+				for (int i = 0; i < width; ++i) {
+					const double exactOriginalIndex = i / stretchFactor;
+					int originalIndex = static_cast<int>(exactOriginalIndex);
+					error += exactOriginalIndex - originalIndex;
+					if (error > 1.0) {
+						++originalIndex;
+						error = 0.0;
+					} else if (error < -1.0) {
+						--originalIndex;
+						error = 0.0;
 					}
+					if (originalIndex < 0) {
+						originalIndex = 0;
+					} else if (originalIndex >= currentWidth) {
+						originalIndex = currentWidth-1;
+					}
+					stretchedColors[row].push_back(unstretchedColors[row][originalIndex]);
 				}
 			}
 			break;
@@ -362,7 +377,7 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) { 
 			break;
 	}
 	switch (flag.stretchVertical) {
-		case StretchRuleVertical::ExtendBottom: {
+		case StretchRuleVertical::PreserveTop: {
 			while (static_cast<int>(stretchedColors.size()) < height) {
 				stretchedColors.push_back(stretchedColors.back());
 			}
@@ -430,7 +445,7 @@ void parseCommandLine(const int argc, char** argv) {
 						auto& colors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
 						flag_t newFlag = flag;
 						if (colors[0].size() < 30) {
-							newFlag.colors = stretch2dFlagTo(flag, 30, 5).colors;
+							newFlag.colors = stretch2dFlagTo(flag, 30, 12).colors;
 						}
 						for (const std::vector<color_t>& color_row : std::get<std::vector<std::vector<color_t>>>(newFlag.colors)) {
 							printf("\n      ");
