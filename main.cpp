@@ -15,7 +15,7 @@
 
 struct color_t {
 	uint8_t r,g,b;
-	color_t(uint32_t rgb)
+	color_t(const uint32_t rgb)
 	: r((rgb >> 16) & 0xff)
 	, g((rgb >> 8) & 0xff)
 	, b(rgb & 0xff)
@@ -209,13 +209,13 @@ std::string resolveAlias(const std::string& arg) {
 
 color_t adjustForReadability(color_t const& color) {
 	if (g_colorAdjustment == colorAdjust::darken) {
-		return color_t(
+		return color_t( // NOLINT(*-return-braced-init-list)
 			(color.r*3)/4,
 			(color.g*3)/4,
 			(color.b*3)/4
 		);
 	} else if (g_colorAdjustment == colorAdjust::lighten) {
-		return color_t(
+		return color_t( // NOLINT(*-return-braced-init-list)
 			64+(color.r*3)/4,
 			64+(color.g*3)/4,
 			64+(color.b*3)/4
@@ -285,7 +285,7 @@ void parseCommandLine(int argc, char** argv) {
 	bool finishedReadingFlags = false;
 	for (int i = 1; i < argc; ++i) {
 		if (finishedReadingFlags) {
-			g_filesToCat.push_back(argv[i]);
+			g_filesToCat.emplace_back(argv[i]);
 		}
 		else if (strEqual(argv[i], "-h") || strEqual(argv[i], "--help")) {
 			printf("pridecat!\n");
@@ -367,10 +367,10 @@ void parseCommandLine(int argc, char** argv) {
 		else if (strEqual(argv[i], "-")) {
 			// use an empty string in the array to represent stdin
 			// so we can still actually have a file called '-'
-			g_filesToCat.push_back("");
+			g_filesToCat.emplace_back("");
 		}
 		else {
-			g_filesToCat.push_back(argv[i]);
+			g_filesToCat.emplace_back(argv[i]);
 		}
 	}
 }
@@ -440,7 +440,7 @@ int main(int argc, char** argv) {
 		catFile(stdin);
 	} else {
 		for (auto const& filepath : g_filesToCat) {
-			if (filepath == "") {
+			if (filepath.empty()) {
 				catFile(stdin);
 			} else {
 				FILE* fh = fopen(filepath.c_str(), "rb");
