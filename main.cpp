@@ -25,15 +25,15 @@ struct color_t {
 	: r(r), g(g), b(b) {}
 };
 
-enum class StretchRuleVertical : uint8_t {
-	None,  // no stretching allowed
+enum class StretchRuleVertical : uint8_t { // TODO: add PreserveBottom
+	Disallowed,  // no stretching allowed
 	Allowed, // stretch vertically
 	PreserveTop,  // repeat only the lase row so the details in the top of the flag are preserved
 	PreserveCenter, // last and first row are repeated to preserve the details in the center of the flag
 };
 
-enum class StretchRuleHorizontal : uint8_t {
-	None,  // no stretching allowed
+enum class StretchRuleHorizontal : uint8_t { // TODO: add PreserveRight
+	Disallowed,  // no stretching allowed
 	Allowed, // stretch horizontally
 	PreserveLeft,  // repeat only the last column so the details on the left side are preserved
 	PreserveCenter, // last and first column are repeated to preserve the details in the center of the flag
@@ -317,7 +317,7 @@ void resetColor() {
 	}
 }
 
-flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) { // TODO: test this
+flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 	if (std::holds_alternative<std::vector<color_t>>(flag.colors)) {
 		printf("WARNING: Method for stretching 2D flags called on 1D flag\n");
 		return flag;
@@ -389,11 +389,14 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) { 
 			if (currentHeight >= height) {
 				break;
 			}
-			const int stretchFactor = height / currentHeight;
-			for (int i = 0; i < currentHeight; ++i) {
-				for (int j = 0; j < stretchFactor; ++j) {
-					stretchedColors.insert(stretchedColors.begin() + i + j, unstretchedColors[i]);
+			stretchedColors.clear();
+			const double stretchFactor = static_cast<double>(height) / currentHeight;
+			for (int i = 0; i < height; ++i) {
+				int originalIndex = static_cast<int>(i / stretchFactor);
+				if (originalIndex >= currentHeight) {
+					originalIndex = currentHeight-1;
 				}
+				stretchedColors.insert(stretchedColors.begin() + i, unstretchedColors[originalIndex]);
 			}
 			break;
 		}
@@ -445,7 +448,7 @@ void parseCommandLine(const int argc, char** argv) {
 						auto& colors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
 						flag_t newFlag = flag;
 						if (colors[0].size() < 30) {
-							newFlag.colors = stretch2dFlagTo(flag, 30, 12).colors;
+							newFlag.colors = stretch2dFlagTo(flag, 30, 6).colors;
 						}
 						for (const std::vector<color_t>& color_row : std::get<std::vector<std::vector<color_t>>>(newFlag.colors)) {
 							printf("\n      ");
