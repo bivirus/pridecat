@@ -25,9 +25,22 @@ struct color_t {
 	: r(r), g(g), b(b) {}
 };
 
+enum class StretchDirection : uint8_t {
+	None,  // no stretching allowed
+	Right, // stretch only from the right side (last color in the line is repeated)
+	Bottom,  // stretch only from the bottom side (color of last row is repeated)
+	Vertical, // stretch vertically (every colums is repeated)
+	VerticalPreserveCenter, // last and first row are repeated
+	Horizontal, // stretch horizontally (every row is repeated)
+	HorizontalPreserveCenter, // last and first column are repeated
+	All, // stretch in all directions (every row and column is repeated)
+	AllPreserveCenter // last and first row and column are repeated
+};
+
 struct flag_t {
 	std::variant<std::vector<color_t>, std::vector<std::vector<color_t>>> colors;
 	std::string description;
+	StretchDirection stretchDirection = StretchDirection::All;  // how to stretch the flag if required (default is all because stripes can be streched without looking weird)
 };
 
 enum class colorAdjust : uint8_t {
@@ -133,7 +146,7 @@ std::map<std::string, flag_t const> allFlags = {
 		"Genderqueer pride flag designed by Marilyn Roxie in 2011"
 	} },
 
-	{ "progress-pride", {
+	{ "progress-pride", {  // TODO: strech progress thingy x3 horizontally (leve width at 9)
 	    // info/colors: https://de.wikipedia.org/wiki/Datei:LGBTQ+_rainbow_flag_Quasar_%22Progress%22_variant.svg
 		std::vector<std::vector<color_t>> {
 			{ 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0xee3124, 0xee3124, 0xee3124, 0xee3124, 0xee3124 },
@@ -143,7 +156,8 @@ std::map<std::string, flag_t const> allFlags = {
 			{ 0xffffff, 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0x0053a6, 0x0053a6, 0x0053a6, 0x0053a6 },
 			{ 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0x9f248f, 0x9f248f, 0x9f248f, 0x9f248f, 0x9f248f },
 		},
-		"Progress pride flag designed by Daniel Quasar in 2018"
+		"Progress pride flag designed by Daniel Quasar in 2018",
+		StretchDirection::Right
 	}
 	}
 };
@@ -300,6 +314,124 @@ void resetColor() {
 	}
 }
 
+flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) { // TODO: test this
+	if (std::holds_alternative<std::vector<color_t>>(flag.colors)) {
+		printf("WARNING: Method for stretching 2D flags called on 1D flag\n");
+		return flag;
+	}
+	auto stretchedColors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
+	switch (flag.stretchDirection) {
+		case StretchDirection::Right: {
+			for (auto& row : stretchedColors) {
+				while (static_cast<int>(row.size()) < width) {
+					row.push_back(row.back());
+				}
+			}
+			break;
+		}
+		case StretchDirection::Bottom: {
+			while (static_cast<int>(stretchedColors.size()) < height) {
+				stretchedColors.push_back(stretchedColors.back());
+			}
+			break;
+		}
+		case StretchDirection::Vertical: {
+			const int currentHeight = static_cast<int>(stretchedColors.size());
+			const std::vector<std::vector<color_t>> unstretchedColors = stretchedColors;
+			if (currentHeight >= height) {
+				break;
+			}
+			const int stretchFactor = height / currentHeight;
+			for (int i = 0; i < currentHeight; ++i) {
+				for (int j = 0; j < stretchFactor; ++j) {
+					stretchedColors.insert(stretchedColors.begin() + i + j, unstretchedColors[i]);
+				}
+			}
+			break;
+		}
+		case StretchDirection::VerticalPreserveCenter: {
+			const int delta_height = height - static_cast<int>(stretchedColors.size());
+			for (int i = 0; i < delta_height / 2; ++i) {
+				stretchedColors.insert(stretchedColors.begin(), stretchedColors.front());
+				stretchedColors.push_back(stretchedColors.back());
+			}
+			break;
+		}
+		case StretchDirection::Horizontal: {
+			const int currentWidth = static_cast<int>(stretchedColors[0].size());
+			const std::vector<std::vector<color_t>> unstretchedColors = stretchedColors;
+			if (currentWidth >= width) {
+				break;
+			}
+			const int stretchFactor = width / currentWidth;
+			for (int row = 0; row < static_cast<int>(unstretchedColors.size()); ++row) {
+				stretchedColors[row].clear();
+				for (int i = 0; i < currentWidth; ++i) {
+					for (int j = 0; j < stretchFactor; ++j) {
+						stretchedColors[row].insert(stretchedColors[row].end(), unstretchedColors[row][i]);
+					}
+				}
+			}
+			break;
+		}
+		case StretchDirection::HorizontalPreserveCenter: {
+			const int delta_width = width - static_cast<int>(stretchedColors[0].size());
+			for (auto& row : stretchedColors) {
+				for (int i = 0; i < delta_width / 2; ++i) {
+					row.insert(row.begin(), row.front());
+					row.push_back(row.back());
+				}
+			}
+			break;
+		}
+		case StretchDirection::All: { // TOO0: fix this
+			const int currentWidth = static_cast<int>(stretchedColors[0].size());
+			const int currentHeight = static_cast<int>(stretchedColors.size());
+			const std::vector<std::vector<color_t>> unstretchedColors = stretchedColors;
+			if (currentWidth >= width && currentHeight >= height) {
+				break;
+			}
+			const int stretchFactorWidth = width / currentWidth;
+			const int stretchFactorHeight = height / currentHeight;
+			for (int i = 0; i < currentHeight; ++i) {
+				for (int j = 0; j < stretchFactorHeight; ++j) {
+					stretchedColors.insert(stretchedColors.begin() + i + j, unstretchedColors[i]);
+				}
+			}
+			for (auto& row : stretchedColors) {
+				for (int i = 0; i < currentWidth; ++i) {
+					for (int j = 0; j < stretchFactorWidth; ++j) {
+						row.insert(row.begin() + i + j, unstretchedColors[&row - &stretchedColors[0]][i]);
+					}
+				}
+			}
+			break;
+		}
+		case StretchDirection::AllPreserveCenter: {
+			const int delta_width = width - static_cast<int>(stretchedColors[0].size());
+			const int delta_height = height - static_cast<int>(stretchedColors.size());
+			for (int i = 0; i < delta_height / 2; ++i) {
+				stretchedColors.insert(stretchedColors.begin(), stretchedColors.front());
+				stretchedColors.push_back(stretchedColors.back());
+			}
+			for (auto& row : stretchedColors) {
+				for (int i = 0; i < delta_width / 2; ++i) {
+					row.insert(row.begin(), row.front());
+					row.push_back(row.back());
+				}
+			}
+			break;
+		}
+		default:
+			return flag;
+	}
+	return flag_t {
+		.colors = stretchedColors,
+		.description = flag.description,
+		.stretchDirection = flag.stretchDirection
+	};
+}
+
 void parseCommandLine(const int argc, char** argv) {
 	bool finishedReadingFlags = false;
 	for (int i = 1; i < argc; ++i) {
@@ -326,7 +458,12 @@ void parseCommandLine(const int argc, char** argv) {
 							putc(' ', stdout);
 						}
 					} else {
-						for (const std::vector<color_t>& color_row : std::get<std::vector<std::vector<color_t>>>(flag.colors)) {
+						auto& colors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
+						flag_t newFlag = flag;
+						if (colors[0].size() < 30) {
+							newFlag.colors = stretch2dFlagTo(flag, 30, 5).colors;
+						}
+						for (const std::vector<color_t>& color_row : std::get<std::vector<std::vector<color_t>>>(newFlag.colors)) {
 							printf("\n      ");
 							for (const color_t color : color_row) {
 								setBackgroundColor(color);
