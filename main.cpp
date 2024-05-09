@@ -5,6 +5,7 @@
 #include <csignal>
 #include <string>
 #include <vector>
+#include <variant>
 #include <map>
 #if defined(_WIN32)
 #include <Windows.h>
@@ -25,7 +26,7 @@ struct color_t {
 };
 
 struct flag_t {
-	std::vector<color_t> colors;
+	std::variant<std::vector<color_t>, std::vector<std::vector<color_t>>> colors;
 	std::string description;
 };
 
@@ -39,75 +40,75 @@ std::map<std::string, flag_t const> allFlags = {
 	{ "lgbt", {
 		// info: https://en.wikipedia.org/wiki/Rainbow_flag_(LGBT)
 		// colors: https://en.wikipedia.org/wiki/File:Gay_Pride_Flag.svg
-		{ 0xE40303, 0xFF8C00, 0xFFED00, 0x008026, 0x004Dff, 0x750787 },
+		std::vector<color_t> { 0xE40303, 0xFF8C00, 0xFFED00, 0x008026, 0x004Dff, 0x750787 },
 		"Classic 6-color rainbow flag popular since 1979"
 	} },
 
 	{ "lgbt-1978", {
 		// info: https://en.wikipedia.org/wiki/Rainbow_flag_(LGBT)
 		// colors: https://en.wikipedia.org/wiki/File:Gay_flag_8.svg
-		{ 0xFF69B4, 0xFF0000, 0xFF8E00, 0xFFFF00, 0x008E00, 0x00C0C0, 0x400098, 0x8E008E },
+		std::vector<color_t> { 0xFF69B4, 0xFF0000, 0xFF8E00, 0xFFFF00, 0x008E00, 0x00C0C0, 0x400098, 0x8E008E },
 		"Original 8-color rainbow flag designed by Gilbert Baker in 1978"
 	} },
 
 	{ "lgbtpoc", {
 		// info: https://en.wikipedia.org/wiki/Rainbow_flag_(LGBT)
 		// colors: https://en.wikipedia.org/wiki/File:Philadelphia_Pride_Flag.svg
-		{ 0x000000, 0x784F17, 0xE40303, 0xFF8C00, 0xFFED00, 0x008026, 0x004DFF, 0x750787 },
+		std::vector<color_t> { 0x000000, 0x784F17, 0xE40303, 0xFF8C00, 0xFFED00, 0x008026, 0x004DFF, 0x750787 },
 		"POC-inclusive rainbow flag designed by Philadelphia City Council in 2017"
 	} },
 
 	{ "transgender", {
 		// info: https://en.wikipedia.org/wiki/Transgender_flags
 		// colors: https://en.wikipedia.org/wiki/File:Transgender_Pride_flag.svg
-		{ 0x5BCEFA, 0xF5A9B8, 0xFFFFFF, 0xF5A9B8, 0x5BCEFA },
+		std::vector<color_t> { 0x5BCEFA, 0xF5A9B8, 0xFFFFFF, 0xF5A9B8, 0x5BCEFA },
 		"Transgender pride flag designed by Monica Helms in 1999"
 	} },
 
 	{ "bisexual", {
 		// info: https://en.wikipedia.org/wiki/Bisexual_pride_flag
 		// colors: https://en.wikipedia.org/wiki/File:Bisexual_Pride_Flag.svg
-		{ 0xD60270, 0xD60270, 0x9B4F96, 0x0038A8, 0x0038A8 },
+		std::vector<color_t> { 0xD60270, 0xD60270, 0x9B4F96, 0x0038A8, 0x0038A8 },
 		"Bisexual pride flag designed by Michael Page in 1998"
 	} },
 
 	{ "asexual", {
 		// info: https://en.wikipedia.org/wiki/LGBT_symbols#Asexuality
 		// colors: https://en.wikipedia.org/wiki/File:Asexual_Pride_Flag.svg
-		{ 0x000000, 0xA3A3A3, 0xFFFFFF, 0x800080 },
+		std::vector<color_t> { 0x000000, 0xA3A3A3, 0xFFFFFF, 0x800080 },
 		"Asexual pride flag designed by AVEN user 'standup' in 2010"
 	} },
 
 	{ "aromantic", {
 		// info/colors: https://cameronwhimsy.tumblr.com/post/75868343112/ive-been-reading-up-on-a-lot-of-the-discussion
-		{ 0x3DA642, 0xA8D379, 0xFFFFFF, 0xA9A9A9, 0x000000 },
+		std::vector<color_t> { 0x3DA642, 0xA8D379, 0xFFFFFF, 0xA9A9A9, 0x000000 },
 		"Aromantic pride flag designed by Tumblr user 'cameronwhimsy' in 2014"
 	} },
 
 	{ "aromantic-asexual", {
 		// info: https://www.lgbtqia.wiki/wiki/Aroace
 		// colors: https://en.wikipedia.org/wiki/File:Aroace_flag.svg (also available from lgbtqia.wiki, but this is higher quality)
-		{ 0xE28C00, 0xECCD00, 0xFFFFFF, 0x62AEDC, 0x203856 },
+		std::vector<color_t> { 0xE28C00, 0xECCD00, 0xFFFFFF, 0x62AEDC, 0x203856 },
 		"Aromantic-asexual pride flag designed by Tumblr user 'aroaesflags' in 2018"
 	} },
 
 	{ "pansexual", {
 		// info: https://majesticmess.com/2018/12/01/interview-creator-of-the-pan-flag/
 		// colors: https://web.archive.org/web/20111103184455/http://pansexualflag.tumblr.com/post/1265215452/hex-color-codes-you-dont-have-to-use-these-exact
-		{ 0xFF218C, 0xFF218C, 0xFFD800, 0xFFD800, 0x21B1FF, 0x21B1FF },
+		std::vector<color_t> { 0xFF218C, 0xFF218C, 0xFFD800, 0xFFD800, 0x21B1FF, 0x21B1FF },
 		"Pansexual pride flag designed by Evie Varney in 2010"
 	} },
 
 	{ "nonbinary", {
 		// info: https://en.wikipedia.org/wiki/LGBT_symbols#Non-binary
 		// colors: https://en.wikipedia.org/wiki/File:Nonbinary_flag.svg
-		{ 0xFFF430, 0xFFFFFF, 0x9C59D1, 0x000000 },
+		std::vector<color_t> { 0xFFF430, 0xFFFFFF, 0x9C59D1, 0x000000 },
 		"Non-binary pride flag designed by Kye Rowan in 2014"
 	} },
 
 	{ "lipstick-lesbian", {
 		// info/colors: https://en.wikipedia.org/wiki/File:Lipstick_Lesbian_flag_without_lips.svg
-		{ 0xA40061, 0xB75592, 0xD063A6, 0xEDEDEB, 0xE4ACCF, 0xC54E54, 0x8A1E04 },
+		std::vector<color_t> { 0xA40061, 0xB75592, 0xD063A6, 0xEDEDEB, 0xE4ACCF, 0xC54E54, 0x8A1E04 },
 		"Lipstick lesbian pride flag designed by Natalie McCray in 2010"
 	} },
 
@@ -115,22 +116,36 @@ std::map<std::string, flag_t const> allFlags = {
 		// info: https://en.wikipedia.org/wiki/LGBT_symbols#Lesbian
 		// colors: https://en.wikipedia.org/wiki/File:Lesbian_pride_flag_2018.svg
 		// second-last color changed from 0xB55690 to 0xB55590 to ensure distinct colors on non-truecolor displays
-		{ 0xD52D00, 0xEF7627, 0xFF9A56, 0xFFFFFF, 0xD162A4, 0xB55590, 0xA30262 },
+		std::vector<color_t> { 0xD52D00, 0xEF7627, 0xFF9A56, 0xFFFFFF, 0xD162A4, 0xB55590, 0xA30262 },
 		"New lesbian pride flag designed by Emily Gwen in 2018"
 	} },
 
 	{ "community-lesbian", {
 		// info/colors: https://majesticmess.com/encyclopedia/lesbian-flag-sadlesbeandisaster/
 		// more info: https://twitter.com/lesflagisracist/status/1107301651403157505
-		{ 0xD52D00, 0xFF9A56, 0xFFFFFF, 0xD362A4, 0xA30262 },
+		std::vector<color_t> { 0xD52D00, 0xFF9A56, 0xFFFFFF, 0xD362A4, 0xA30262 },
 		"5-color 'Community' variant designed by Tumblr user 'taqwomen' in 2018"
 	} },
 
 	{ "genderqueer", {
 		// info/colors: https://genderqueerid.com/about-flag
-		{ 0xB57EDC, 0xB57EDC, 0xFFFFFF, 0xFFFFFF, 0x4A8123, 0x4A8123 },
+		std::vector<color_t> { 0xB57EDC, 0xB57EDC, 0xFFFFFF, 0xFFFFFF, 0x4A8123, 0x4A8123 },
 		"Genderqueer pride flag designed by Marilyn Roxie in 2011"
 	} },
+
+	{ "progress-pride", {
+	    // info/colors: https://de.wikipedia.org/wiki/Datei:LGBTQ+_rainbow_flag_Quasar_%22Progress%22_variant.svg
+		std::vector<std::vector<color_t>> {
+			{ 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0xee3124, 0xee3124, 0xee3124, 0xee3124, 0xee3124 },
+			{ 0xffffff, 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0xf57e29, 0xf57e29, 0xf57e29, 0xf57e29 },
+			{ 0xffffff, 0xffffff, 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0xffee00, 0xffee00, 0xffee00 },
+			{ 0xffffff, 0xffffff, 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0x58b947, 0x58b947, 0x58b947 },
+			{ 0xffffff, 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0x0053a6, 0x0053a6, 0x0053a6, 0x0053a6 },
+			{ 0xf5a9b8, 0x5bcefa, 0x603917, 0x000000, 0x9f248f, 0x9f248f, 0x9f248f, 0x9f248f, 0x9f248f },
+		},
+		"Progress pride flag designed by Daniel Quasar in 2018"
+	}
+	}
 };
 
 std::map<std::string, std::string> aliases = {
@@ -144,12 +159,14 @@ std::map<std::string, std::string> aliases = {
 	{ "enby", "nonbinary" },
 	{ "pink-lesbian", "lipstick-lesbian" },
 	{ "lesbian", "community-lesbian" },
+	{ "gq", "genderqueer" },
+	{ "progress", "progress-pride" },
 };
 
 std::vector<color_t> g_colorQueue;
 std::vector<std::string> g_filesToCat;
 unsigned int g_currentRow = 0;
-colorAdjust g_colorAdjustment = colorAdjust::none;
+auto g_colorAdjustment = colorAdjust::none;
 
 #if defined(_WIN32)
 bool g_useColors = _isatty(_fileno(stdout));
@@ -194,14 +211,16 @@ int bestNonTruecolorMatch(color_t const& color) {
 }
 
 void pushFlag(flag_t const& flag) {
-	for (color_t const& color : flag.colors) {
-		g_colorQueue.push_back(color);
+	if (std::holds_alternative<std::vector<color_t>>(flag.colors)) {
+		auto const& colors = std::get<std::vector<color_t>>(flag.colors);
+		for (color_t const& color : colors) {
+			g_colorQueue.push_back(color);
+		}
 	}
 }
 
 std::string resolveAlias(const std::string& arg) {
-	const auto& alias = aliases.find(arg);
-	if (alias != aliases.end()) {
+	if (const auto& alias = aliases.find(arg); alias != aliases.end()) {
 		return alias->second;
 	}
 	return arg;
@@ -281,7 +300,7 @@ void resetColor() {
 	}
 }
 
-void parseCommandLine(int argc, char** argv) {
+void parseCommandLine(const int argc, char** argv) {
 	bool finishedReadingFlags = false;
 	for (int i = 1; i < argc; ++i) {
 		if (finishedReadingFlags) {
@@ -292,23 +311,34 @@ void parseCommandLine(int argc, char** argv) {
 			printf("It's like cat but more colorful :)\n");
 
 			printf("\nCurrently available flags:\n");
-			for (const auto& flag : allFlags) {
-				printf("  --%s", flag.first.c_str());
-				for (const auto& alias : aliases) {
-					if (flag.first == alias.second) {
-						printf(",--%s", alias.first.c_str());
+			for (const auto&[name, flag] : allFlags) {
+				printf("  --%s", name.c_str());
+				for (const auto&[short_name, long_name] : aliases) {
+					if (name == long_name) {
+						printf(",--%s", short_name.c_str());
 					}
 				}
 				if (g_useColors) {
 					putc(' ', stdout);
-					for (const auto& color : flag.second.colors) {
-						setBackgroundColor(color);
-						putc(' ', stdout);
+					if (std::holds_alternative<std::vector<color_t>>(flag.colors)) {
+						for (const color_t color : std::get<std::vector<color_t>>(flag.colors)) {
+							setBackgroundColor(color);
+							putc(' ', stdout);
+						}
+					} else {
+						for (const std::vector<color_t>& color_row : std::get<std::vector<std::vector<color_t>>>(flag.colors)) {
+							printf("\n      ");
+							for (const color_t color : color_row) {
+								setBackgroundColor(color);
+								putc(' ', stdout);
+							}
+							resetBackgroundColor();
+						}
 					}
 					resetBackgroundColor();
 				}
 				printf("\n");
-				printf("      %s\n\n", flag.second.description.c_str());
+				printf("      %s\n\n", flag.description.c_str());
 			}
 
 			printf("Additional options:\n");
