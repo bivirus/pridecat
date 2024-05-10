@@ -580,10 +580,10 @@ void parseCommandLine(const int argc, char** argv) {
 			printf("      Lighten colors slightly for improved readability on dark backgrounds\n\n");
 			printf("  -d,--darken\n");
 			printf("      Darken colors slightly for improved readability on light backgrounds\n\n");
-			printf("  -h,--help\n");
-			printf("      Display this message\n\n");
 			printf("  -s,--stretch <height>\n");
 			printf("      Stretch the flag to a certain height before repeating\n\n");
+			printf("  -h,--help\n");
+			printf("      Display this message\n\n");
 
 			printf("Examples:\n");
 			printf("  pridecat f - g          Output f's contents, then stdin, then g's contents.\n");
