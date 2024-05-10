@@ -47,6 +47,10 @@ Colorize your terminal output with pride!
 
 --pansexual,--pan
 	Pansexual pride flag designed by Evie Varney in 2010
+	
+--progress-pride,--progress                  
+      Progress pride flag designed by Daniel Quasar in 2018
+
 
 --transgender,--trans
 	Transgender pride flag designed by Monica Helms in 1999
@@ -72,6 +76,9 @@ Colorize your terminal output with pride!
 
 -T,--no-truecolor
 	Force disable truecolor output (even if the terminal does seem to support it)
+
+-s,--stretch <height>
+      Stretch the flag to a certain height before repeating
 
 -h,--help
 	Display the help page
