@@ -77,6 +77,11 @@ Colorize your terminal output with pride!
 	Display the help page
 ```
 
+## Installation (Linux)
+```bash
+curl -s https://raw.githubusercontent.com/lunasorcery/pridecat/main/install.sh | bash
+```
+
 ## Building
 
 On any *nix system it _should_ be as simple as:
