@@ -576,16 +576,19 @@ void catFile2d(FILE* fh) {
 
 	int c;
 	while ((c = getc(fh)) >= 0) {
-		setColor(colors[g_currentRow][g_currentColumn]);
-		putc(c, stdout);
-		resetColor();
-		g_currentColumn++;
 		if (c == '\n') {
 			g_currentRow++;
 			g_currentColumn = 0;
 			if (g_currentRow == colors.size()) {
 				g_currentRow = 0;
 			}
+			resetColor();
+			putc(c, stdout);
+		} else {
+			setColor(colors[g_currentRow][g_currentColumn]);
+			putc(c, stdout);
+			resetColor();
+			g_currentColumn++;
 		}
 	}
 
