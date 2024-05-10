@@ -7,6 +7,7 @@
 #include <vector>
 #include <variant>
 #include <map>
+#include <stdexcept>
 #if defined(_WIN32)
 #include <Windows.h>
 #include <io.h>
@@ -181,147 +182,59 @@ std::map<std::string, std::string> aliases = {
 	{ "progress", "progress-pride" },
 };
 
-std::vector<color_t> g_colorQueue;
-std::vector<std::string> g_filesToCat;
-unsigned int g_currentRow = 0;
-unsigned int g_currentColumn = 0;
-bool two_dimensiona_flag = false;
-flag_t current2dFlag;
-auto g_colorAdjustment = colorAdjust::none;
-
-#if defined(_WIN32)
-bool g_useColors = _isatty(_fileno(stdout));
-bool g_trueColor = true;
-#else
-bool isTrueColorTerminal() {
-	char const* ct = getenv("COLORTERM");
-	return ct ? strstr(ct, "truecolor") || strstr(ct, "24bit") : false;
-}
-bool g_useColors = isatty(STDOUT_FILENO);
-bool g_trueColor = isTrueColorTerminal();
-#endif
-bool g_setBackgroundColor = false;
-
-
-bool strEqual(char const* a, char const* b) {
-	return strcmp(a, b) == 0;
-}
-
-bool startsWith(char const* a, char const* b) {
-	int const length = strlen(b);
-	for (int i = 0; i < length; ++i) {
-		if (a[i] != b[i]) {
-			return false;
+flag_t stretch1dFlagTo(const flag_t& flag, const int height) {
+	if (std::holds_alternative<std::vector<std::vector<color_t>>>(flag.colors)) {
+		printf("WARNING: Method for stretching 1D flags called on 2D flag\n");
+		return flag;
+	}
+	auto stretchedColors = std::get<std::vector<color_t>>(flag.colors);
+	switch (flag.stretchVertical) {
+		case StretchRuleVertical::Allowed: {
+			const int currentHeight = static_cast<int>(stretchedColors.size());
+			const std::vector<color_t> unstretchedColors = stretchedColors;
+			if (currentHeight >= height) {
+				break;
+			}
+			stretchedColors.clear();
+			const double stretchFactor = static_cast<double>(height) / currentHeight;
+			for (int i = 0; i < height; ++i) {
+				int originalIndex = static_cast<int>(i / stretchFactor);
+				if (originalIndex >= currentHeight) {
+					originalIndex = currentHeight-1;
+				}
+				stretchedColors.push_back(unstretchedColors[originalIndex]);
+			}
+			break;
 		}
-	}
-	return true;
-}
-
-int bestNonTruecolorMatch(color_t const& color) {
-	/*
-	per wikipedia:
-	    0-  7:  standard colors (as in ESC [ 30–37 m)
-	    8- 15:  high intensity colors (as in ESC [ 90–97 m)
-	->  16-231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
-	    232-255:  grayscale from black to white in 24 steps
-	*/
-	int const r = (color.r*6)/256;
-	int const g = (color.g*6)/256;
-	int const b = (color.b*6)/256;
-	return 16 + (36*r) + (6*g) + b;
-}
-
-void pushFlag(flag_t const& flag) {
-	if (std::holds_alternative<std::vector<color_t>>(flag.colors)) {
-		auto const& colors = std::get<std::vector<color_t>>(flag.colors);
-		for (color_t const& color : colors) {
-			g_colorQueue.push_back(color);
+		case StretchRuleVertical::PreserveTop: {
+			while (static_cast<int>(stretchedColors.size()) < height) {
+				stretchedColors.push_back(stretchedColors.back());
+			}
+			break;
 		}
-	} else {
-		two_dimensiona_flag = true;
-		current2dFlag = flag;
+		case StretchRuleVertical::PreserveCenter: {
+			const int delta_height = height - static_cast<int>(stretchedColors.size());
+			for (int i = 0; i < delta_height / 2; ++i) {
+				stretchedColors.insert(stretchedColors.begin(), stretchedColors.front());
+				stretchedColors.push_back(stretchedColors.back());
+			}
+			break;
+		}
+		case StretchRuleVertical::PreserveBottom: {
+			while (static_cast<int>(stretchedColors.size()) < height) {
+				stretchedColors.insert(stretchedColors.begin(), stretchedColors.front());
+			}
+			break;
+		}
+		default:
+			break;
 	}
-}
-
-std::string resolveAlias(const std::string& arg) {
-	if (const auto& alias = aliases.find(arg); alias != aliases.end()) {
-		return alias->second;
-	}
-	return arg;
-}
-
-color_t adjustForReadability(color_t const& color) {
-	if (g_colorAdjustment == colorAdjust::darken) {
-		return color_t( // NOLINT(*-return-braced-init-list)
-			(color.r*3)/4,
-			(color.g*3)/4,
-			(color.b*3)/4
-		);
-	} else if (g_colorAdjustment == colorAdjust::lighten) {
-		return color_t( // NOLINT(*-return-braced-init-list)
-			64+(color.r*3)/4,
-			64+(color.g*3)/4,
-			64+(color.b*3)/4
-		);
-	} else {
-		return color;
-	}
-}
-
-void setTextColor(color_t const& color) {
-	if (!g_useColors)
-		return;
-
-	color_t const readableColor = adjustForReadability(color);
-
-	if (g_trueColor) {
-		fprintf(stdout, "\033[38;2;%d;%d;%dm", readableColor.r, readableColor.g, readableColor.b);
-	} else {
-		fprintf(stdout, "\033[38;5;%dm", bestNonTruecolorMatch(readableColor));
-	}
-}
-
-void setBackgroundColor(color_t const& color) {
-	if (!g_useColors)
-		return;
-
-	color_t const readableColor = adjustForReadability(color);
-
-	if (g_trueColor) {
-		fprintf(stdout, "\033[48;2;%d;%d;%dm", readableColor.r, readableColor.g, readableColor.b);
-	} else {
-		fprintf(stdout, "\033[48;5;%dm", bestNonTruecolorMatch(readableColor));
-	}
-}
-
-void resetTextColor() {
-	if (!g_useColors)
-		return;
-
-	fputs("\033[39m", stdout);
-}
-
-void resetBackgroundColor() {
-	if (!g_useColors)
-		return;
-
-	fputs("\033[49m", stdout);
-}
-
-void setColor(color_t const& color) {
-	if (g_setBackgroundColor) {
-		setBackgroundColor(color);
-	} else {
-		setTextColor(color);
-	}
-}
-
-void resetColor() {
-	if (g_setBackgroundColor) {
-		resetBackgroundColor();
-	} else {
-		resetTextColor();
-	}
+	return flag_t {
+		.colors = stretchedColors,
+		.description = flag.description,
+		.stretchVertical = flag.stretchVertical,
+		.stretchHorizontal = flag.stretchHorizontal
+	};
 }
 
 flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
@@ -331,7 +244,6 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 	}
 	auto stretchedColors = std::get<std::vector<std::vector<color_t>>>(flag.colors);
 	switch (flag.stretchHorizontal) {
-
 		case StretchRuleHorizontal::Allowed: {
 			const int currentWidth = static_cast<int>(stretchedColors[0].size());
 			const std::vector<std::vector<color_t>> unstretchedColors = stretchedColors;
@@ -441,11 +353,179 @@ flag_t stretch2dFlagTo(const flag_t& flag, const int width, const int height) {
 	};
 }
 
-void parseCommandLine(const int argc, char** argv) { // TODO: add support for -s <height>,--stretch <height> to stretch the flag to a certain height
+std::vector<color_t> g_colorQueue;
+std::vector<std::string> g_filesToCat;
+unsigned int g_currentRow = 0;
+unsigned int g_currentColumn = 0;
+bool two_dimensiona_flag = false;
+flag_t current2dFlag;
+auto g_colorAdjustment = colorAdjust::none;
+
+int stretchToHeight = 0;
+
+#if defined(_WIN32)
+bool g_useColors = _isatty(_fileno(stdout));
+bool g_trueColor = true;
+#else
+bool isTrueColorTerminal() {
+	char const* ct = getenv("COLORTERM");
+	return ct ? strstr(ct, "truecolor") || strstr(ct, "24bit") : false;
+}
+bool g_useColors = isatty(STDOUT_FILENO);
+bool g_trueColor = isTrueColorTerminal();
+#endif
+bool g_setBackgroundColor = false;
+
+
+bool strEqual(char const* a, char const* b) {
+	return strcmp(a, b) == 0;
+}
+
+bool startsWith(char const* a, char const* b) {
+	int const length = strlen(b);
+	for (int i = 0; i < length; ++i) {
+		if (a[i] != b[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+int bestNonTruecolorMatch(color_t const& color) {
+	/*
+	per wikipedia:
+	    0-  7:  standard colors (as in ESC [ 30–37 m)
+	    8- 15:  high intensity colors (as in ESC [ 90–97 m)
+	->  16-231:  6 × 6 × 6 cube (216 colors): 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+	    232-255:  grayscale from black to white in 24 steps
+	*/
+	int const r = (color.r*6)/256;
+	int const g = (color.g*6)/256;
+	int const b = (color.b*6)/256;
+	return 16 + (36*r) + (6*g) + b;
+}
+
+void pushFlag(flag_t const& flag) {
+	if (std::holds_alternative<std::vector<color_t>>(flag.colors)) {
+		std::vector<color_t> colors;
+		if (stretchToHeight != 0) {
+			const auto& stretchedFlag = stretch1dFlagTo(flag, stretchToHeight);
+			colors = std::get<std::vector<color_t>>(stretchedFlag.colors);
+		} else {
+			colors = std::get<std::vector<color_t>>(flag.colors);
+		}
+		for (color_t const& color : colors) {
+			g_colorQueue.push_back(color);
+		}
+	} else {
+		two_dimensiona_flag = true;
+		if (stretchToHeight != 0) {
+			current2dFlag = stretch2dFlagTo(flag, 0, stretchToHeight);
+		} else {
+			current2dFlag = flag;
+		}
+	}
+}
+
+std::string resolveAlias(const std::string& arg) {
+	if (const auto& alias = aliases.find(arg); alias != aliases.end()) {
+		return alias->second;
+	}
+	return arg;
+}
+
+color_t adjustForReadability(color_t const& color) {
+	if (g_colorAdjustment == colorAdjust::darken) {
+		return color_t( // NOLINT(*-return-braced-init-list)
+			(color.r*3)/4,
+			(color.g*3)/4,
+			(color.b*3)/4
+		);
+	} else if (g_colorAdjustment == colorAdjust::lighten) {
+		return color_t( // NOLINT(*-return-braced-init-list)
+			64+(color.r*3)/4,
+			64+(color.g*3)/4,
+			64+(color.b*3)/4
+		);
+	} else {
+		return color;
+	}
+}
+
+void setTextColor(color_t const& color) {
+	if (!g_useColors)
+		return;
+
+	color_t const readableColor = adjustForReadability(color);
+
+	if (g_trueColor) {
+		fprintf(stdout, "\033[38;2;%d;%d;%dm", readableColor.r, readableColor.g, readableColor.b);
+	} else {
+		fprintf(stdout, "\033[38;5;%dm", bestNonTruecolorMatch(readableColor));
+	}
+}
+
+void setBackgroundColor(color_t const& color) {
+	if (!g_useColors)
+		return;
+
+	color_t const readableColor = adjustForReadability(color);
+
+	if (g_trueColor) {
+		fprintf(stdout, "\033[48;2;%d;%d;%dm", readableColor.r, readableColor.g, readableColor.b);
+	} else {
+		fprintf(stdout, "\033[48;5;%dm", bestNonTruecolorMatch(readableColor));
+	}
+}
+
+void resetTextColor() {
+	if (!g_useColors)
+		return;
+
+	fputs("\033[39m", stdout);
+}
+
+void resetBackgroundColor() {
+	if (!g_useColors)
+		return;
+
+	fputs("\033[49m", stdout);
+}
+
+void setColor(color_t const& color) {
+	if (g_setBackgroundColor) {
+		setBackgroundColor(color);
+	} else {
+		setTextColor(color);
+	}
+}
+
+void resetColor() {
+	if (g_setBackgroundColor) {
+		resetBackgroundColor();
+	} else {
+		resetTextColor();
+	}
+}
+
+void parseCommandLine(const int argc, char** argv) {
 	bool finishedReadingFlags = false;
 	for (int i = 1; i < argc; ++i) {
 		if (finishedReadingFlags) {
 			g_filesToCat.emplace_back(argv[i]);
+		}
+		else if (strEqual(argv[i], "-s") || strEqual(argv[i], "--stretch")) {
+			if (i + 1 < argc) {
+				try {
+					stretchToHeight = std::stoi(argv[++i]);
+				} catch (std::invalid_argument&) {
+					fprintf(stderr, "pridecat: Invalid height '%s'\n", argv[i]);
+					exit(1);
+				}
+			} else {
+				fprintf(stderr, "pridecat: Expected an argument after %s\n", argv[i]);
+				exit(1);
+			}
 		}
 		else if (strEqual(argv[i], "-h") || strEqual(argv[i], "--help")) {
 			printf("pridecat!\n");
@@ -502,6 +582,8 @@ void parseCommandLine(const int argc, char** argv) { // TODO: add support for -s
 			printf("      Darken colors slightly for improved readability on light backgrounds\n\n");
 			printf("  -h,--help\n");
 			printf("      Display this message\n\n");
+			printf("  -s,--stretch <height>\n");
+			printf("      Stretch the flag to a certain height before repeating\n\n");
 
 			printf("Examples:\n");
 			printf("  pridecat f - g          Output f's contents, then stdin, then g's contents.\n");
