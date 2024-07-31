@@ -101,6 +101,17 @@ make && make install
 
 This depends on a recent (C++17) C++ compiler being available. If you encounter issues, please let me know.
 
+## Uninstall (Linux)
+```bash
+rm -f /usr/local/bin/pridecat
+```
+or 
+```
+git clone https://github.com/lunasorcery/pridecat.git
+cd pridecat
+make uninstall
+```
+
 ## Windows support?
 
 There's currently no Windows-compatible build setup, but the code should work under the notable windows terminals if you compile it with cl.exe. Tested in cmd, PowerShell, and Windows Terminal.
